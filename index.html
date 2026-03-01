@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Ambulance — Animated Circuit</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --pcb: #0a1a0a;
+  --pcb2: #061406;
+  --trace: #1a4a1a;
+  --green: #00ff88;
+  --red: #ff2244;
+  --yellow: #ffcc00;
+  --blue: #00aaff;
+  --orange: #ff8800;
+  --purple: #cc44ff;
+  --white: #e8f4e8;
+  --dim: #1e3a1e;
+  --glow-g: 0 0 8px #00ff88, 0 0 20px #00ff8844;
+  --glow-r: 0 0 8px #ff2244, 0 0 20px #ff224444;
+  --glow-y: 0 0 8px #ffcc00, 0 0 20px #ffcc0044;
+  --glow-b: 0 0 8px #00aaff, 0 0 20px #00aaff44;
+  --glow-o: 0 0 8px #ff8800, 0 0 20px #ff880044;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--pcb);
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--green);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* PCB grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.header {
+  text-align: center;
+  padding: 20px;
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid #1a4a1a;
+}
+.header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--green);
+  letter-spacing: 4px;
+  text-shadow: var(--glow-g);
+}
+.header p { font-size: 10px; color: #4a8a4a; letter-spacing: 2px; margin-top: 4px; }
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 10px 20px;
+  background: #061406;
+  border-bottom: 1px solid #1a4a1a;
+  position: relative;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.status-item { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  animation: blink 1s infinite;
+}
+.s-green { background: var(--green); box-shadow: var(--glow-g); }
+.s-red   { background: var(--red);   box-shadow: var(--glow-r); animation-delay: 0.3s; }
+.s-blue  { background: var(--blue);  box-shadow: var(--glow-b); animation-delay: 0.6s; }
+.s-orange{ background: var(--orange);box-shadow: var(--glow-o); animation-delay: 0.9s; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* MAIN LAYOUT */
+.circuit-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  padding: 20px;
+  position: relative;
+  z-index: 5;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* BOARD PANELS */
+.board {
+  background: var(--pcb2);
+  border: 1px solid var(--trace);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 30%, rgba(0,255,136,0.03) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.board-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--trace);
+  text-align: center;
+}
+.s1-label { color: var(--orange); text-shadow: var(--glow-o); }
+.s2-label { color: var(--green);  text-shadow: var(--glow-g); }
+
+/* COMPONENT BLOCKS */
+.comp-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.comp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--trace);
+  border-radius: 6px;
+  background: rgba(0,255,136,0.02);
+  position: relative;
+  transition: all 0.3s;
+  cursor: default;
+}
+
+.comp.active {
+  border-color: var(--green);
+  background: rgba(0,255,136,0.06);
+  box-shadow: inset 0 0 15px rgba(0,255,136,0.05);
+}
+.comp.active-r  { border-color: var(--red);    background: rgba(255,34,68,0.06);  }
+.comp.active-b  { border-color: var(--blue);   background: rgba(0,170,255,0.06);  }
+.comp.active-o  { border-color: var(--orange); background: rgba(255,136,0,0.06);  }
+.comp.active-y  { border-color: var(--yellow); background: rgba(255,204,0,0.06);  }
+
+.comp-icon {
+  width: 36px; height: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--trace);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.comp-info { flex: 1; min-width: 0; }
+.comp-name { font-size: 10px; font-weight: 700; color: var(--white); white-space: nowrap; }
+.comp-desc { font-size: 9px; color: #4a8a4a; margin-top: 1px; }
+.comp-status {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* PIN lines on components */
+.pin-line {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 2px;
+  background: var(--trace);
+}
+.pin-line.active { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.pin-line.active-r  { background: var(--red);    box-shadow: 0 0 4px var(--red); }
+.pin-line.active-b  { background: var(--blue);   box-shadow: 0 0 4px var(--blue); }
+.pin-line.active-o  { background: var(--orange); box-shadow: 0 0 4px var(--orange); }
+
+/* LED INDICATORS */
+.led {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.led-off { background: #1a2a1a; border: 1px solid #2a4a2a; }
+.led-green  { background: var(--green);  box-shadow: var(--glow-g); }
+.led-red    { background: var(--red);    box-shadow: var(--glow-r); }
+.led-blue   { background: var(--blue);   box-shadow: var(--glow-b); }
+.led-yellow { background: var(--yellow); box-shadow: var(--glow-y); }
+.led-orange { background: var(--orange); box-shadow: var(--glow-o); }
+.led-pulse  { animation: ledPulse 0.5s infinite alternate; }
+
+@keyframes ledPulse {
+  from { opacity: 0.5; transform: scale(0.9); }
+  to   { opacity: 1;   transform: scale(1.1); }
+}
+
+/* MIDDLE CHANNEL */
+.middle-channel {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 8px;
+  position: relative;
+}
+
+.channel-block {
+  width: 100%;
+  background: #061406;
+  border: 1px solid var(--trace);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+  font-size: 8px;
+  color: #4a8a4a;
+  position: relative;
+  overflow: hidden;
+}
+.channel-block .ch-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+/* MOVING DATA PACKETS */
+.packet-track {
+  position: relative;
+  height: 12px;
+  background: rgba(0,255,136,0.03);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.packet {
+  position: absolute;
+  top: 2px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* TRAFFIC LIGHT */
+.traffic-light-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: #0a0a0a;
+  border: 2px solid #333;
+  border-radius: 8px;
+  width: 60px;
+  margin: 0 auto;
+}
+.tl-light {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  transition: all 0.4s;
+}
+.tl-red    { background: #3a0000; }
+.tl-yellow { background: #3a3000; }
+.tl-green  { background: #003a10; }
+.tl-red.on    { background: var(--red);    box-shadow: var(--glow-r), inset 0 0 8px rgba(255,255,255,0.3); }
+.tl-yellow.on { background: var(--yellow); box-shadow: var(--glow-y), inset 0 0 8px rgba(255,255,255,0.3); }
+.tl-green.on  { background: var(--green);  box-shadow: var(--glow-g), inset 0 0 8px rgba(255,255,255,0.3); }
+
+/* RELAY VISUAL */
+.relay-visual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 4px;
+}
+.relay-ch {
+  padding: 3px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  text-align: center;
+  border: 1px solid var(--trace);
+  background: rgba(0,255,136,0.02);
+  transition: all 0.3s;
+}
+.relay-ch.on-r { background: rgba(255,34,68,0.2);  border-color: var(--red);    color: var(--red); }
+.relay-ch.on-g { background: rgba(0,255,136,0.2);  border-color: var(--green);  color: var(--green); }
+.relay-ch.on-y { background: rgba(255,204,0,0.2);  border-color: var(--yellow); color: var(--yellow); }
+.relay-ch.on-b { background: rgba(0,170,255,0.2);  border-color: var(--blue);   color: var(--blue); }
+
+/* OLED SCREEN */
+.oled-screen {
+  background: #000a04;
+  border: 2px solid #2a5a2a;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 8px;
+  line-height: 1.5;
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 50px;
+  box-shadow: inset 0 0 10px rgba(0,255,136,0.1);
+}
+.oled-line { min-height: 10px; }
+.oled-blink { animation: blink 1s infinite; }
+
+/* GPS COORDS */
+.gps-coords {
+  font-size: 9px;
+  color: #4aff88;
+  text-align: center;
+  padding: 4px;
+  animation: coordUpdate 2s infinite;
+}
+@keyframes coordUpdate {
+  0%,90%   { opacity: 1; }
+  95%      { opacity: 0; }
+  100%     { opacity: 1; }
+}
+
+/* IR BEAM ANIMATION */
+.ir-beam {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+}
+.ir-segment {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--red);
+  opacity: 0;
+}
+
+/* SIREN */
+.siren-ring {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  position: absolute;
+  animation: sirenPulse 1s ease-out infinite;
+  opacity: 0;
+}
+@keyframes sirenPulse {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* WIFI WAVES */
+.wifi-waves {
+  position: relative;
+  width: 20px; height: 14px;
+  margin: 0 auto;
+}
+.wifi-arc {
+  position: absolute;
+  border: 2px solid var(--blue);
+  border-bottom: none;
+  border-radius: 50% 50% 0 0;
+  opacity: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* CLOUD */
+.cloud-block {
+  background: #061420;
+  border: 1px solid #1a3a5a;
+  border-radius: 6px;
+  padding: 10px;
+  margin: 10px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cloud-block .cloud-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 8px;
+  color: var(--blue);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.cloud-pulse {
+  animation: cloudPulse 2s infinite;
+}
+@keyframes cloudPulse {
+  0%,100% { box-shadow: 0 0 5px rgba(0,170,255,0.2); }
+  50%     { box-shadow: 0 0 20px rgba(0,170,255,0.5); }
+}
+
+/* STEP LOG */
+.step-log {
+  max-width: 1400px;
+  margin: 0 auto 20px;
+  padding: 0 20px;
+  position: relative;
+  z-index: 5;
+}
+.log-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--trace);
+}
+.log-entries {
+  background: var(--pcb2);
+  border: 1px solid var(--trace);
+  border-radius: 6px;
+  padding: 10px 14px;
+  height: 100px;
+  overflow-y: auto;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.log-entry { opacity: 0; animation: fadeIn 0.3s forwards; }
+.log-entry.log-g { color: var(--green); }
+.log-entry.log-r { color: var(--red); }
+.log-entry.log-b { color: var(--blue); }
+.log-entry.log-o { color: var(--orange); }
+.log-entry.log-y { color: var(--yellow); }
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* CONTROLS */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px;
+  position: relative;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.btn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 10px 20px;
+  border: 1px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.btn-red    { border-color: var(--red);    color: var(--red); }
+.btn-green  { border-color: var(--green);  color: var(--green); }
+.btn-blue   { border-color: var(--blue);   color: var(--blue); }
+.btn-yellow { border-color: var(--yellow); color: var(--yellow); }
+.btn-red:hover    { background: rgba(255,34,68,0.15);   box-shadow: var(--glow-r); }
+.btn-green:hover  { background: rgba(0,255,136,0.15);   box-shadow: var(--glow-g); }
+.btn-blue:hover   { background: rgba(0,170,255,0.15);   box-shadow: var(--glow-b); }
+.btn-yellow:hover { background: rgba(255,204,0,0.15);   box-shadow: var(--glow-y); }
+
+/* SVG wires canvas */
+#wire-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Phase indicator */
+.phase-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border: 1px solid;
+}
+.phase-idle { border-color: #4a8a4a; color: #4a8a4a; }
+.phase-emg  { border-color: var(--red); color: var(--red); animation: blink 0.5s infinite; }
+.phase-norm { border-color: var(--green); color: var(--green); }
+
+</style>
+</head>
+<body>
+
+<svg id="wire-canvas"></svg>
+
+<div class="header">
+  <h1>⚡ SMART AMBULANCE — LIVE CIRCUIT SIMULATION</h1>
+  <p>SIDE 1: AMBULANCE TRANSMITTER &nbsp;|&nbsp; SIDE 2: TRAFFIC SIGNAL RECEIVER</p>
+</div>
+
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot s-green" id="dot-gps"></div> <span id="lbl-gps">GPS: SEARCHING</span></div>
+  <div class="status-item"><div class="status-dot s-orange" id="dot-siren"></div> <span id="lbl-siren">SIREN: OFF</span></div>
+  <div class="status-item"><div class="status-dot s-blue" id="dot-lora"></div> <span id="lbl-lora">LORA: IDLE</span></div>
+  <div class="status-item"><div class="status-dot s-red" id="dot-signal"></div> <span id="lbl-signal">SIGNAL: NORMAL</span></div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-red"    onclick="activateSiren()">🚨 ACTIVATE SIREN</button>
+  <button class="btn btn-green"  onclick="deactivateSiren()">✅ DEACTIVATE SIREN</button>
+  <button class="btn btn-blue"   onclick="resetAll()">🔄 RESET</button>
+  <button class="btn btn-yellow" onclick="runFullDemo()">▶ FULL DEMO</button>
+</div>
+
+<!-- CIRCUIT GRID -->
+<div class="circuit-container">
+
+  <!-- ══════════════ SIDE 1 — AMBULANCE ══════════════ -->
+  <div class="board">
+    <div class="board-label s1-label">🚑 SIDE 1 — ESP32 AMBULANCE UNIT</div>
+
+    <div class="comp-grid">
+
+      <!-- SIREN SENSOR -->
+      <div class="comp" id="comp-siren">
+        <div class="comp-icon" id="icon-siren">🔔</div>
+        <div class="comp-info">
+          <div class="comp-name">SIREN SENSOR</div>
+          <div class="comp-desc">GPIO 39 — Input Only</div>
+        </div>
+        <div class="led led-off" id="led-siren"></div>
+        <span class="comp-status phase-idle" id="stat-siren">IDLE</span>
+      </div>
+
+      <!-- ESP32 MAIN -->
+      <div class="comp active-o" id="comp-esp32-s1" style="border-color:var(--orange)">
+        <div class="comp-icon" style="font-size:14px;border-color:var(--orange)">ESP32</div>
+        <div class="comp-info">
+          <div class="comp-name" style="color:var(--orange)">ESP32 DevKit V1</div>
+          <div class="comp-desc">Main Processor — Running</div>
+          <div class="oled-screen" id="oled-s1" style="margin-top:5px">
+            <div class="oled-line" id="o1-l1">SMART AMBULANCE</div>
+            <div class="oled-line" id="o1-l2">ID: AMB_001</div>
+            <div class="oled-line" id="o1-l3">GPS: Searching...</div>
+            <div class="oled-line" id="o1-l4">Siren: OFF</div>
+          </div>
+        </div>
+        <div class="led led-orange led-pulse"></div>
+      </div>
+
+      <!-- GPS MODULE -->
+      <div class="comp" id="comp-gps">
+        <div class="comp-icon" id="icon-gps">📡</div>
+        <div class="comp-info">
+          <div class="comp-name">NEO-8M GPS</div>
+          <div class="comp-desc">UART2 — GPIO 16/17</div>
+          <div class="gps-coords" id="gps-coords">Acquiring satellites...</div>
+        </div>
+        <div class="led led-off" id="led-gps"></div>
+        <span class="comp-status phase-idle" id="stat-gps">SEARCHING</span>
+      </div>
+
+      <!-- E32 LORA TX -->
+      <div class="comp" id="comp-lora-tx">
+        <div class="comp-icon" id="icon-lora-tx">📻</div>
+        <div class="comp-info">
+          <div class="comp-name">E32/AS32 LoRa TX</div>
+          <div class="comp-desc">UART1 — GPIO 19/27 — 433MHz</div>
+          <div class="ir-beam" id="lora-beam">
+            <div class="ir-segment" id="lb1" style="width:8px"></div>
+            <div class="ir-segment" id="lb2" style="width:12px;background:var(--purple)"></div>
+            <div class="ir-segment" id="lb3" style="width:8px"></div>
+            <div class="ir-segment" id="lb4" style="width:16px;background:var(--purple)"></div>
+            <div class="ir-segment" id="lb5" style="width:8px"></div>
+          </div>
+        </div>
+        <div class="led led-off" id="led-lora-tx"></div>
+        <span class="comp-status phase-idle" id="stat-lora">IDLE</span>
+      </div>
+
+      <!-- IR TRANSMITTER -->
+      <div class="comp" id="comp-ir-tx">
+        <div class="comp-icon" id="icon-ir">💡</div>
+        <div class="comp-info">
+          <div class="comp-name">IR TRANSMITTER LED</div>
+          <div class="comp-desc">GPIO 26 — 38kHz NEC Protocol</div>
+          <div class="ir-beam" id="ir-beam">
+            <div class="ir-segment" id="irb1" style="width:6px"></div>
+            <div class="ir-segment" id="irb2" style="width:10px"></div>
+            <div class="ir-segment" id="irb3" style="width:6px"></div>
+            <div class="ir-segment" id="irb4" style="width:14px"></div>
+            <div class="ir-segment" id="irb5" style="width:6px"></div>
+            <div class="ir-segment" id="irb6" style="width:10px"></div>
+          </div>
+        </div>
+        <div class="led led-off" id="led-ir"></div>
+        <span class="comp-status phase-idle" id="stat-ir">OFF</span>
+      </div>
+
+      <!-- SIM7600 -->
+      <div class="comp" id="comp-sim">
+        <div class="comp-icon" id="icon-sim">📶</div>
+        <div class="comp-info">
+          <div class="comp-name">SIM7600 4G LTE</div>
+          <div class="comp-desc">GPIO 32/33 — HTTP POST → Cloud</div>
+        </div>
+        <div class="led led-off" id="led-sim"></div>
+        <span class="comp-status phase-idle" id="stat-sim">IDLE</span>
+      </div>
+
+    </div>
+  </div><!-- end side1 -->
+
+  <!-- ══════════════ MIDDLE CHANNEL ══════════════ -->
+  <div class="middle-channel">
+
+    <div class="channel-block" id="ch-ir" style="border-color:#ff224422">
+      <div class="ch-title" style="color:var(--red)">IR SIGNAL</div>
+      <div style="font-size:8px;color:#4a2a2a">100–300m</div>
+      <div class="packet-track">
+        <div class="packet" id="pkt-ir" style="background:var(--red)"></div>
+      </div>
+    </div>
+
+    <div class="channel-block" id="ch-lora" style="border-color:#cc44ff22">
+      <div class="ch-title" style="color:var(--purple)">LoRa RF</div>
+      <div style="font-size:8px;color:#3a2a4a">433MHz / 3km</div>
+      <div class="packet-track">
+        <div class="packet" id="pkt-lora" style="background:var(--purple)"></div>
+      </div>
+    </div>
+
+    <div class="cloud-block cloud-pulse" id="ch-cloud">
+      <div class="cloud-title">☁ CLOUD</div>
+      <div style="font-size:8px;color:#2a5a8a">MQTT BROKER</div>
+      <div class="packet-track" style="background:rgba(0,170,255,0.05)">
+        <div class="packet" id="pkt-mqtt" style="background:var(--blue)"></div>
+      </div>
+      <div style="font-size:8px;color:#2a5a8a;margin-top:4px" id="mqtt-status">Waiting...</div>
+    </div>
+
+    <div class="channel-block" id="ch-status" style="border-color:#00ff8822;margin-top:auto">
+      <div class="ch-title" style="color:var(--green)">SIGNAL STATUS</div>
+      <div id="ch-mode" style="font-size:9px;color:var(--green);margin-top:4px">NORMAL</div>
+    </div>
+
+  </div><!-- end middle -->
+
+  <!-- ══════════════ SIDE 2 — SIGNAL UNIT ══════════════ -->
+  <div class="board">
+    <div class="board-label s2-label">🚦 SIDE 2 — ESP32 SIGNAL UNIT</div>
+
+    <div class="comp-grid">
+
+      <!-- IR RECEIVER -->
+      <div class="comp" id="comp-ir-rx">
+        <div class="comp-icon" id="icon-ir-rx">🔴</div>
+        <div class="comp-info">
+          <div class="comp-name">TSOP1738 IR RECEIVER</div>
+          <div class="comp-desc">GPIO 4 — 38kHz Detector</div>
+        </div>
+        <div class="led led-off" id="led-ir-rx"></div>
+        <span class="comp-status phase-idle" id="stat-ir-rx">LISTENING</span>
+      </div>
+
+      <!-- E32 LORA RX -->
+      <div class="comp" id="comp-lora-rx">
+        <div class="comp-icon" id="icon-lora-rx">📻</div>
+        <div class="comp-info">
+          <div class="comp-name">E32/AS32 LoRa RX</div>
+          <div class="comp-desc">UART2 — GPIO 16/17 — 433MHz</div>
+        </div>
+        <div class="led led-off" id="led-lora-rx"></div>
+        <span class="comp-status phase-idle" id="stat-lora-rx">LISTENING</span>
+      </div>
+
+      <!-- ESP32 SIGNAL -->
+      <div class="comp active" id="comp-esp32-s2" style="border-color:var(--green)">
+        <div class="comp-icon" style="font-size:14px;border-color:var(--green)">ESP32</div>
+        <div class="comp-info">
+          <div class="comp-name" style="color:var(--green)">ESP32 DevKit V1</div>
+          <div class="comp-desc">Signal Controller — Running</div>
+          <div class="oled-screen" id="oled-s2" style="margin-top:5px">
+            <div class="oled-line" id="o2-l1">SIGNAL_001</div>
+            <div class="oled-line" id="o2-l2">State: NORMAL-RED</div>
+            <div class="oled-line" id="o2-l3">AMB: None</div>
+            <div class="oled-line" id="o2-l4" class="oled-blink">W:OK M:OK</div>
+          </div>
+        </div>
+        <div class="led led-green led-pulse"></div>
+      </div>
+
+      <!-- RELAY MODULE -->
+      <div class="comp" id="comp-relay">
+        <div class="comp-icon" id="icon-relay">🔌</div>
+        <div class="comp-info">
+          <div class="comp-name">4-CHANNEL RELAY</div>
+          <div class="comp-desc">GPIO 27/26/25/33 — Active LOW</div>
+          <div class="relay-visual">
+            <div class="relay-ch on-r" id="rch1">CH1 🔴RED</div>
+            <div class="relay-ch" id="rch2" style="color:#2a4a2a;border-color:#1a3a1a">CH2 🟢GRN</div>
+            <div class="relay-ch" id="rch3" style="color:#2a4a2a;border-color:#1a3a1a">CH3 🟡YLW</div>
+            <div class="relay-ch" id="rch4" style="color:#2a4a2a;border-color:#1a3a1a">CH4 🚶PED</div>
+          </div>
+        </div>
+        <div class="led led-red" id="led-relay"></div>
+      </div>
+
+      <!-- TRAFFIC LIGHT -->
+      <div class="comp" id="comp-tl" style="justify-content:center">
+        <div class="comp-icon">🚦</div>
+        <div class="comp-info">
+          <div class="comp-name">TRAFFIC SIGNAL LIGHTS</div>
+          <div class="comp-desc">12V LED — Relay Controlled</div>
+        </div>
+        <div class="traffic-light-visual">
+          <div class="tl-light tl-red on"    id="tl-red"></div>
+          <div class="tl-light tl-yellow"    id="tl-yellow"></div>
+          <div class="tl-light tl-green"     id="tl-green"></div>
+        </div>
+      </div>
+
+      <!-- BUZZER -->
+      <div class="comp" id="comp-buzzer">
+        <div class="comp-icon" id="icon-buzzer">🔊</div>
+        <div class="comp-info">
+          <div class="comp-name">BUZZER ALERT</div>
+          <div class="comp-desc">GPIO 32 — Pedestrian Warning</div>
+        </div>
+        <div class="led led-off" id="led-buzzer"></div>
+        <span class="comp-status phase-idle" id="stat-buzzer">SILENT</span>
+      </div>
+
+    </div>
+  </div><!-- end side2 -->
+
+</div><!-- end circuit-container -->
+
+<!-- STEP LOG -->
+<div class="step-log">
+  <div class="log-title">📋 SYSTEM EVENT LOG</div>
+  <div class="log-entries" id="log"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let state = {
+  sirenActive: false,
+  gpsFixed: false,
+  emergencyMode: false,
+  normalPhase: 'RED',   // RED / GREEN / YELLOW
+  normalTimer: null,
+  demoTimer: null,
+  loopTimers: [],
+};
+
+// ══════════════════════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════════════════════
+function log(msg, type='g') {
+  const el = document.getElementById('log');
+  const ts  = new Date().toLocaleTimeString('en',{hour12:false});
+  const div = document.createElement('div');
+  div.className = `log-entry log-${type}`;
+  div.textContent = `[${ts}] ${msg}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 40) el.removeChild(el.firstChild);
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPER — set LED
+// ══════════════════════════════════════════════════════
+function setLed(id, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'led';
+  if (color === 'off')    el.classList.add('led-off');
+  else if (color==='g')   el.classList.add('led-green','led-pulse');
+  else if (color==='r')   el.classList.add('led-red','led-pulse');
+  else if (color==='b')   el.classList.add('led-blue','led-pulse');
+  else if (color==='y')   el.classList.add('led-yellow','led-pulse');
+  else if (color==='o')   el.classList.add('led-orange','led-pulse');
+}
+
+function setStatus(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'comp-status';
+  if (type==='emg')  el.classList.add('phase-emg');
+  else if (type==='ok') el.classList.add('phase-norm');
+  else el.classList.add('phase-idle');
+}
+
+function setComp(id, colorClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'comp';
+  if (colorClass) el.classList.add(colorClass);
+}
+
+function oled1(l1,l2,l3,l4) {
+  ['o1-l1','o1-l2','o1-l3','o1-l4'].forEach((id,i)=>{
+    const val = [l1,l2,l3,l4][i];
+    if (val !== undefined) document.getElementById(id).textContent = val;
+  });
+}
+function oled2(l1,l2,l3,l4) {
+  ['o2-l1','o2-l2','o2-l3','o2-l4'].forEach((id,i)=>{
+    const val = [l1,l2,l3,l4][i];
+    if (val !== undefined) document.getElementById(id).textContent = val;
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  PACKET ANIMATION across middle channel
+// ══════════════════════════════════════════════════════
+function shootPacket(pktId, color, label) {
+  const pkt = document.getElementById(pktId);
+  if (!pkt) return;
+  pkt.style.left = '0px';
+  pkt.style.opacity = '1';
+  pkt.style.background = color;
+  pkt.style.boxShadow = `0 0 6px ${color}`;
+  pkt.style.transition = 'left 0.8s linear';
+  requestAnimationFrame(()=>{
+    pkt.style.left = 'calc(100% - 8px)';
+  });
+  setTimeout(()=>{
+    pkt.style.opacity = '0';
+    pkt.style.transition = 'none';
+  }, 900);
+}
+
+// ══════════════════════════════════════════════════════
+//  IR BEAM ANIMATION
+// ══════════════════════════════════════════════════════
+function animateIRBeam() {
+  const segs = ['irb1','irb2','irb3','irb4','irb5','irb6'];
+  segs.forEach((id,i) => {
+    setTimeout(()=>{
+      const el = document.getElementById(id);
+      if (el) { el.style.opacity='1'; el.style.transition='opacity 0.1s'; }
+      setTimeout(()=>{ if(el) el.style.opacity='0'; }, 100);
+    }, i*60);
+  });
+}
+
+function animateLoRaBeam() {
+  const segs = ['lb1','lb2','lb3','lb4','lb5'];
+  segs.forEach((id,i) => {
+    setTimeout(()=>{
+      const el = document.getElementById(id);
+      if (el) { el.style.opacity='1'; el.style.transition='opacity 0.15s'; }
+      setTimeout(()=>{ if(el) el.style.opacity='0'; }, 150);
+    }, i*80);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TRAFFIC LIGHT CONTROL
+// ══════════════════════════════════════════════════════
+function setTrafficLight(color) {
+  document.getElementById('tl-red').className    = 'tl-light tl-red';
+  document.getElementById('tl-yellow').className = 'tl-light tl-yellow';
+  document.getElementById('tl-green').className  = 'tl-light tl-green';
+
+  // Reset relay channels
+  ['rch1','rch2','rch3','rch4'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.className = 'relay-ch';
+    el.style.cssText = 'color:#2a4a2a;border-color:#1a3a1a';
+  });
+
+  if (color === 'red') {
+    document.getElementById('tl-red').classList.add('on');
+    setLed('led-relay','r');
+    const r = document.getElementById('rch1');
+    r.className='relay-ch on-r'; r.style.cssText='';
+    document.getElementById('ch-mode').style.color = 'var(--red)';
+    document.getElementById('ch-mode').textContent = 'RED';
+    setStatus('dot-signal','','');
+    document.getElementById('lbl-signal').textContent = 'SIGNAL: RED';
+  } else if (color === 'green') {
+    document.getElementById('tl-green').classList.add('on');
+    setLed('led-relay','g');
+    const g = document.getElementById('rch2');
+    g.className='relay-ch on-g'; g.style.cssText='';
+    document.getElementById('ch-mode').style.color = 'var(--green)';
+    document.getElementById('ch-mode').textContent = 'GREEN ✓ EMERGENCY';
+    document.getElementById('lbl-signal').textContent = 'SIGNAL: GREEN';
+  } else if (color === 'yellow') {
+    document.getElementById('tl-yellow').classList.add('on');
+    setLed('led-relay','y');
+    const y = document.getElementById('rch3');
+    y.className='relay-ch on-y'; y.style.cssText='';
+    document.getElementById('ch-mode').style.color = 'var(--yellow)';
+    document.getElementById('ch-mode').textContent = 'YELLOW';
+    document.getElementById('lbl-signal').textContent = 'SIGNAL: YELLOW';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  NORMAL TRAFFIC CYCLE
+// ══════════════════════════════════════════════════════
+function startNormalCycle() {
+  clearTimeout(state.normalTimer);
+  state.normalPhase = 'RED';
+  runNormalPhase();
+}
+
+function runNormalPhase() {
+  if (state.emergencyMode || state.sirenActive) return;
+
+  const durations = { RED:4000, GREEN:3000, YELLOW:1500 };
+  const next      = { RED:'GREEN', GREEN:'YELLOW', YELLOW:'RED' };
+
+  setTrafficLight(state.normalPhase.toLowerCase());
+  if (state.normalPhase !== 'RED') {
+    oled2('SIGNAL_001','Normal: '+state.normalPhase,'AMB: None','W:OK M:OK');
+  }
+
+  state.normalTimer = setTimeout(()=>{
+    state.normalPhase = next[state.normalPhase];
+    runNormalPhase();
+  }, durations[state.normalPhase]);
+}
+
+// ══════════════════════════════════════════════════════
+//  GPS SIMULATION
+// ══════════════════════════════════════════════════════
+function simulateGPSFix() {
+  let sats = 0;
+  const interval = setInterval(()=>{
+    sats++;
+    document.getElementById('gps-coords').textContent = `Sats: ${sats}/12`;
+    if (sats >= 6) {
+      clearInterval(interval);
+      state.gpsFixed = true;
+      setLed('led-gps','g');
+      setStatus('stat-gps','FIXED','ok');
+      setComp('comp-gps','active');
+      document.getElementById('gps-coords').textContent = 'Lat:12.97160 Lng:77.59460';
+      document.getElementById('dot-gps').className = 'status-dot s-green';
+      document.getElementById('lbl-gps').textContent = 'GPS: FIXED';
+      oled1('!! EMERGENCY !!','Lat:12.97160','Lng:77.59460','Sent: '+state.totalSent);
+      log('GPS module locked — 6 satellites acquired', 'g');
+    }
+  }, 400);
+  state.loopTimers.push(interval);
+}
+
+// ══════════════════════════════════════════════════════
+//  ACTIVATE SIREN → FULL EMERGENCY SEQUENCE
+// ══════════════════════════════════════════════════════
+let sendCount = 0;
+
+function activateSiren() {
+  if (state.sirenActive) return;
+  state.sirenActive = true;
+  clearTimeout(state.normalTimer);
+
+  log('🔔 SIREN ACTIVATED — Emergency system starting', 'r');
+
+  // Siren component lights up
+  setLed('led-siren','r');
+  setStatus('stat-siren','ACTIVE','emg');
+  setComp('comp-siren','active-r');
+  document.getElementById('lbl-siren').textContent = 'SIREN: ON 🚨';
+  document.getElementById('icon-siren').textContent = '🚨';
+
+  // Update ESP32 status bar
+  document.getElementById('dot-siren').className='status-dot s-red';
+
+  if (!state.gpsFixed) {
+    log('⏳ Waiting for GPS fix...', 'o');
+    simulateGPSFix();
+    setTimeout(()=>{ if (state.sirenActive) startEmergencyBroadcast(); }, 2500);
+  } else {
+    startEmergencyBroadcast();
+  }
+}
+
+function startEmergencyBroadcast() {
+  if (!state.sirenActive) return;
+  state.emergencyMode = true;
+
+  log('🚑 GPS FIXED — Starting 3-channel broadcast', 'o');
+  oled1('!! EMERGENCY !!','Lat:12.97160','Lng:77.59460','Broadcast ON');
+
+  // Step 1 — IR blast (300ms)
+  let irCount = 0;
+  const irInterval = setInterval(()=>{
+    if (!state.sirenActive) { clearInterval(irInterval); return; }
+    irCount++;
+    setLed('led-ir','r');
+    setComp('comp-ir-tx','active-r');
+    setStatus('stat-ir','BLASTING','emg');
+    animateIRBeam();
+    document.getElementById('icon-ir').textContent = '🔴';
+    if (irCount === 1) {
+      log('💡 IR TRANSMITTER → Sending 38kHz NEC pulse', 'r');
+      shootPacket('pkt-ir','#ff2244','IR');
+      setTimeout(()=>receiveIR(), 900);
+    }
+  }, 300);
+  state.loopTimers.push(irInterval);
+
+  // Step 2 — LoRa broadcast (1s)
+  setTimeout(()=>{
+    if (!state.sirenActive) return;
+    let loraCount = 0;
+    const loraInterval = setInterval(()=>{
+      if (!state.sirenActive) { clearInterval(loraInterval); return; }
+      loraCount++;
+      setLed('led-lora-tx','o');
+      setComp('comp-lora-tx','active-o');
+      setStatus('stat-lora','TX ACTIVE','emg');
+      animateLoRaBeam();
+      document.getElementById('icon-lora-tx').textContent = '📡';
+      document.getElementById('lbl-lora').textContent = 'LORA: TX';
+      if (loraCount <= 3) {
+        log(`📻 E32 LoRa BROADCAST → "AMB_001|12.97160|77.59460|EMERGENCY|a1"`, 'o');
+        shootPacket('pkt-lora','#cc44ff','LORA');
+        setTimeout(()=>receiveLoRa(), 900);
+      }
+    }, 1000);
+    state.loopTimers.push(loraInterval);
+  }, 300);
+
+  // Step 3 — 4G/Cloud (1.5s)
+  setTimeout(()=>{
+    if (!state.sirenActive) return;
+    log('📶 SIM7600 → HTTP POST to cloud server', 'b');
+    setLed('led-sim','b');
+    setComp('comp-sim','active-b');
+    setStatus('stat-sim','SENDING','ok');
+    document.getElementById('icon-sim').textContent = '📡';
+    document.getElementById('mqtt-status').textContent = 'GPS received!';
+    shootPacket('pkt-mqtt','#00aaff','MQTT');
+    setTimeout(()=>{
+      document.getElementById('mqtt-status').textContent = 'Signal cmd sent!';
+      log('☁ CLOUD → Sending GREEN cmd to SIGNAL_001 via MQTT', 'b');
+      setTimeout(()=>receiveMQTT(), 900);
+    }, 900);
+
+    // Repeat cloud updates
+    const simInterval = setInterval(()=>{
+      if (!state.sirenActive) { clearInterval(simInterval); return; }
+      sendCount++;
+      oled1('!! EMERGENCY !!','Lat:12.97160','Lng:77.59460','Sent: '+sendCount);
+      shootPacket('pkt-mqtt','#00aaff','MQTT');
+    }, 2000);
+    state.loopTimers.push(simInterval);
+  }, 1500);
+}
+
+// ══════════════════════════════════════════════════════
+//  SIGNAL UNIT RECEIVES (IR / LoRa / MQTT)
+// ══════════════════════════════════════════════════════
+function receiveIR() {
+  log('🔴 TSOP1738 → IR signal detected! Code: 0x01 = AMB_001', 'r');
+  setLed('led-ir-rx','r');
+  setComp('comp-ir-rx','active-r');
+  setStatus('stat-ir-rx','DETECTED!','emg');
+  document.getElementById('icon-ir-rx').textContent = '🔴';
+  if (!state.emergencyGreen) triggerGreen('IR');
+}
+
+function receiveLoRa() {
+  log('📻 E32 LoRa RX → Valid packet from AMB_001 — checksum OK', 'o');
+  setLed('led-lora-rx','o');
+  setComp('comp-lora-rx','active-o');
+  setStatus('stat-lora-rx','RECEIVED!','emg');
+  document.getElementById('icon-lora-rx').textContent = '📡';
+  if (!state.emergencyGreen) triggerGreen('LORA');
+}
+
+function receiveMQTT() {
+  log('📨 MQTT → {"cmd":"GREEN","amb":"AMB_001"} received', 'b');
+  if (!state.emergencyGreen) triggerGreen('MQTT');
+}
+
+// ══════════════════════════════════════════════════════
+//  TRIGGER GREEN — EMERGENCY MODE ON SIGNAL UNIT
+// ══════════════════════════════════════════════════════
+function triggerGreen(source) {
+  state.emergencyGreen = true;
+  clearTimeout(state.normalTimer);
+
+  log(`✅ EMERGENCY TRIGGERED via ${source} → Switching to GREEN`, 'g');
+  log('🔴 Cross roads → RED (locked) | 🟢 Ambulance lane → GREEN', 'g');
+
+  // Signal unit ESP32 OLED
+  oled2('> EMERGENCY <','AMB: AMB_001','Src: '+source,'GREEN ACTIVE');
+
+  // Traffic light → GREEN
+  setTrafficLight('green');
+
+  // Buzzer ON
+  setLed('led-buzzer','y');
+  setStatus('stat-buzzer','BUZZING','emg');
+  document.getElementById('icon-buzzer').textContent = '🔊';
+  setComp('comp-buzzer','active-y');
+
+  document.getElementById('lbl-signal').textContent = 'SIGNAL: 🟢 GREEN';
+  document.getElementById('ch-mode').textContent = '🚑 EMERGENCY GREEN';
+  document.getElementById('ch-mode').style.color = 'var(--green)';
+
+  log('🔔 BUZZER → 1kHz warning tone active (pedestrian alert)', 'y');
+}
+
+// ══════════════════════════════════════════════════════
+//  DEACTIVATE SIREN
+// ══════════════════════════════════════════════════════
+function deactivateSiren() {
+  if (!state.sirenActive) return;
+
+  log('✅ SIREN OFF — Ambulance passed junction', 'g');
+  log('⏱ Signal resetting → YELLOW → normal cycle', 'y');
+
+  state.sirenActive    = false;
+  state.emergencyMode  = false;
+  state.emergencyGreen = false;
+  sendCount            = 0;
+
+  // Clear all timers
+  state.loopTimers.forEach(t => clearInterval(t));
+  state.loopTimers = [];
+
+  // Siren off
+  setLed('led-siren','off');
+  setStatus('stat-siren','IDLE','');
+  setComp('comp-siren','');
+  document.getElementById('icon-siren').textContent = '🔔';
+  document.getElementById('lbl-siren').textContent = 'SIREN: OFF';
+
+  // IR off
+  setLed('led-ir','off'); setStatus('stat-ir','OFF','');
+  setComp('comp-ir-tx',''); document.getElementById('icon-ir').textContent = '💡';
+
+  // LoRa off
+  setLed('led-lora-tx','off'); setStatus('stat-lora','IDLE','');
+  setComp('comp-lora-tx',''); document.getElementById('icon-lora-tx').textContent = '📻';
+  document.getElementById('lbl-lora').textContent = 'LORA: IDLE';
+
+  // SIM off
+  setLed('led-sim','off'); setStatus('stat-sim','IDLE','');
+  setComp('comp-sim',''); document.getElementById('icon-sim').textContent = '📶';
+
+  // Signal unit reset
+  setLed('led-ir-rx','off'); setStatus('stat-ir-rx','LISTENING','');
+  setComp('comp-ir-rx',''); document.getElementById('icon-ir-rx').textContent = '🔴';
+
+  setLed('led-lora-rx','off'); setStatus('stat-lora-rx','LISTENING','');
+  setComp('comp-lora-rx','');
+
+  // Buzzer off
+  setLed('led-buzzer','off'); setStatus('stat-buzzer','SILENT','');
+  document.getElementById('icon-buzzer').textContent = '🔊';
+  setComp('comp-buzzer','');
+
+  // Yellow transition
+  setTrafficLight('yellow');
+  document.getElementById('ch-mode').textContent = 'RESETTING...';
+  document.getElementById('ch-mode').style.color = 'var(--yellow)';
+  document.getElementById('mqtt-status').textContent = 'Normal cmd sent';
+
+  oled2('SIGNAL_001','Resetting...','AMB: None','W:OK M:OK');
+
+  setTimeout(()=>{
+    log('🔄 Signal → Resuming normal RED/GREEN/YELLOW cycle', 'g');
+    startNormalCycle();
+    document.getElementById('lbl-signal').textContent = 'SIGNAL: NORMAL';
+    oled1('-- IDLE --','Siren: OFF','GPS: FIXED','ID: AMB_001');
+  }, 1500);
+}
+
+// ══════════════════════════════════════════════════════
+//  RESET ALL
+// ══════════════════════════════════════════════════════
+function resetAll() {
+  state.sirenActive    = false;
+  state.gpsFixed       = false;
+  state.emergencyMode  = false;
+  state.emergencyGreen = false;
+  sendCount            = 0;
+  clearTimeout(state.normalTimer);
+  state.loopTimers.forEach(t => clearInterval(t));
+  state.loopTimers = [];
+
+  // Reset all LEDs
+  ['led-siren','led-gps','led-ir','led-lora-tx','led-sim',
+   'led-ir-rx','led-lora-rx','led-relay','led-buzzer'].forEach(id=>setLed(id,'off'));
+
+  ['stat-siren','stat-gps','stat-ir','stat-lora','stat-sim',
+   'stat-ir-rx','stat-lora-rx','stat-buzzer'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){el.textContent='IDLE';el.className='comp-status phase-idle';}
+  });
+
+  ['comp-siren','comp-gps','comp-lora-tx','comp-ir-tx',
+   'comp-sim','comp-ir-rx','comp-lora-rx','comp-relay',
+   'comp-buzzer'].forEach(id=>setComp(id,''));
+
+  document.getElementById('icon-siren').textContent   = '🔔';
+  document.getElementById('icon-ir').textContent      = '💡';
+  document.getElementById('icon-lora-tx').textContent = '📻';
+  document.getElementById('icon-sim').textContent     = '📶';
+  document.getElementById('icon-ir-rx').textContent   = '🔴';
+  document.getElementById('icon-lora-rx').textContent = '📻';
+  document.getElementById('icon-relay').textContent   = '🔌';
+  document.getElementById('icon-buzzer').textContent  = '🔊';
+
+  document.getElementById('gps-coords').textContent   = 'Acquiring satellites...';
+  document.getElementById('lbl-gps').textContent      = 'GPS: SEARCHING';
+  document.getElementById('lbl-siren').textContent    = 'SIREN: OFF';
+  document.getElementById('lbl-lora').textContent     = 'LORA: IDLE';
+  document.getElementById('lbl-signal').textContent   = 'SIGNAL: NORMAL';
+  document.getElementById('mqtt-status').textContent  = 'Waiting...';
+
+  oled1('SYSTEM READY','ID: AMB_001','GPS: Searching...','Siren: OFF');
+  oled2('SIGNAL_001','State: NORMAL-RED','AMB: None','W:OK M:OK');
+
+  setLed('led-relay','r');
+  setTrafficLight('red');
+
+  document.getElementById('log').innerHTML = '';
+  log('🔄 System reset complete', 'g');
+
+  setTimeout(()=>startNormalCycle(), 500);
+  setTimeout(()=>simulateGPSFix(), 1000);
+}
+
+// ══════════════════════════════════════════════════════
+//  FULL DEMO — Auto-runs entire sequence
+// ══════════════════════════════════════════════════════
+function runFullDemo() {
+  resetAll();
+  log('▶ FULL DEMO STARTING in 3 seconds...', 'b');
+  setTimeout(()=>{
+    log('🔔 Step 1 — Ambulance siren activates', 'r');
+    activateSiren();
+  }, 3000);
+  setTimeout(()=>{
+    if (state.sirenActive) {
+      log('✅ Step 2 — Ambulance clears junction', 'g');
+      deactivateSiren();
+    }
+  }, 12000);
+}
+
+// ══════════════════════════════════════════════════════
+//  STARTUP
+// ══════════════════════════════════════════════════════
+window.onload = () => {
+  log('⚡ Smart Ambulance System booting...', 'g');
+  log('📋 SIGNAL_001 online — waiting for emergency', 'g');
+  setLed('led-relay','r');
+  startNormalCycle();
+  setTimeout(()=>simulateGPSFix(), 800);
+  setTimeout(()=>log('🌐 WiFi connected | MQTT broker online', 'b'), 1200);
+  setTimeout(()=>log('📡 E32 LoRa listening on 433MHz', 'o'), 1600);
+  setTimeout(()=>log('🔴 TSOP1738 IR receiver active', 'r'), 2000);
+  setTimeout(()=>log('✅ All systems ready — Press ACTIVATE SIREN to simulate', 'g'), 2400);
+};
+</script>
+</body>
+</html>
